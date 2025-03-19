@@ -11,9 +11,21 @@ def obdelaj_sliko_s_skatlami(slika, sirina_skatle, visina_skatle, barva_koze) ->
     Primer: Če je v sliki 25 škatel, kjer je v vsaki vrstici 5 škatel, naj bo seznam oblike
       [[1,0,0,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,0,0,0,1]]. 
       V tem primeru je v prvi škatli 1 piksel kože, v drugi 0, v tretji 0, v četrti 1 in v peti 1.'''
+    res=[]
+    visina, sirina, _ = slika.shape #dimenzija celotne slike
+    for y in range(0,visina,visina_skatle):
+        vrstica=[]
+        for x in range(0,sirina,sirina_skatle):
+            x2 = min(x + sirina_skatle, sirina)  
+            y2 = min(y + visina_skatle, visina)  
+            roi = slika[y:y2, x:x2]
+            piksli_koze = prestej_piklse_z_barvo_koze(roi, barva_koze)
+            vrstica.append(piksli_koze)
+
+            res.append(vrstica)            
    
             
-    pass
+    return res
 
 def prestej_piklse_z_barvo_koze(slika, barva_koze) -> int:
     '''Prestej število pikslov z barvo kože v škatli.'''
@@ -36,11 +48,13 @@ def doloci_barvo_koze(slika,levo_zgoraj,desno_spodaj) -> tuple:
 
 if __name__ == '__main__':
     #Pripravi kamero
+    kamera = cv.VideoCapture(0)
+    slika=kamera.read()
 
     #Zajami prvo sliko iz kamere
-
+    
     #Izračunamo barvo kože na prvi sliki
-
+    
     #Zajemaj slike iz kamere in jih obdeluj     
     
     #Označi območja (škatle), kjer se nahaja obraz (kako je prepuščeno vaši domišljiji)
