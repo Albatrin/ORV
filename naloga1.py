@@ -17,13 +17,23 @@ def obdelaj_sliko_s_skatlami(slika, sirina_skatle, visina_skatle, barva_koze) ->
 
 def prestej_piklse_z_barvo_koze(slika, barva_koze) -> int:
     '''Prestej število pikslov z barvo kože v škatli.'''
-    pass
+    piksle=0
+    
+    
+    return piksle
 
 def doloci_barvo_koze(slika,levo_zgoraj,desno_spodaj) -> tuple:
     '''Ta funkcija se kliče zgolj 1x na prvi sliki iz kamere. 
     Vrne barvo kože v območju ki ga definira oklepajoča škatla (levo_zgoraj, desno_spodaj).
       Način izračuna je prepuščen vaši domišljiji.'''
-    pass
+    x1,y1=levo_zgoraj
+    x2,y2=desno_spodaj
+    roi =slika[y1:y2,x1:x2]
+    average=np.mean(roi, axis=(0,1))
+    toleranca=20
+    zgornja_meja=np.clip(average+toleranca,0,255)
+    spodnja_meja=np.clip(average-toleranca,0,255)
+    return(spodnja_meja,zgornja_meja)
 
 if __name__ == '__main__':
     #Pripravi kamero
