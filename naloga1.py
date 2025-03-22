@@ -1,31 +1,25 @@
 import cv2 as cv
 import numpy as np
-
+import time
 def zmanjsaj_sliko(slika, sirina, visina):
-    return cv.resize(slika,(sirina,visina))
+    return cv.resize(slika, (sirina, visina))
 
 def obdelaj_sliko_s_skatlami(slika, sirina_skatle, visina_skatle, barva_koze) -> list:
-    '''Sprehodi se skozi sliko v velikosti škatle (sirina_skatle x visina_skatle) in izračunaj število pikslov kože v vsaki škatli.
-    Škatle se ne smejo prekrivati!
-    Vrne seznam škatel, s številom pikslov kože.
-    Primer: Če je v sliki 25 škatel, kjer je v vsaki vrstici 5 škatel, naj bo seznam oblike
-      [[1,0,0,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,0,0,0,1]]. 
-      V tem primeru je v prvi škatli 1 piksel kože, v drugi 0, v tretji 0, v četrti 1 in v peti 1.'''
-    res=[]
-    visina, sirina, _ = slika.shape #dimenzija celotne slike
-    for y in range(0,visina,visina_skatle):
-        vrstica=[]
-        for x in range(0,sirina,sirina_skatle):
-            x2 = min(x + sirina_skatle, sirina)  
-            y2 = min(y + visina_skatle, visina)  
-            roi = slika[y:y2, x:x2]
-            piksli_koze = prestej_piklse_z_barvo_koze(roi, barva_koze)
-            vrstica.append(piksli_koze)
 
-            res.append(vrstica)            
-   
-            
-    return res
+    spodnja_meja, zgornja_meja = barva_koze
+    skatle = []
+    h, w = slika.shape[:2]
+    
+    for y in range(0, h, visina_skatle):
+        for x in range(0, w, sirina_skatle):
+            x_end = min(x + sirina_skatle, w)
+            y_end = min(y + visina_skatle, h)
+            okno = slika[y:y_end, x:x_end]
+            piksli_koze = prestej_piklse_z_barvo_koze(okno, (spodnja_meja, zgornja_meja))
+            skatle.append((x, y, piksli_koze))
+    
+    return skatle
+
 
 def prestej_piklse_z_barvo_koze(slika, barva_koze) -> int:
     '''Prestej število pikslov z barvo kože v škatli.'''
@@ -46,21 +40,48 @@ def doloci_barvo_koze(slika,levo_zgoraj,desno_spodaj) -> tuple:
     zgornja_meja = np.clip(average + toleranca, 0, 255).astype(np.uint8)
     return(spodnja_meja,zgornja_meja)
 
+
+
+
 if __name__ == '__main__':
-    #Pripravi kamero
+    velikost_skatle=15
     kamera = cv.VideoCapture(0)
-    slika=kamera.read()
+    if not kamera.isOpened():
+        print("Napaka pri odpiranju kamere")
+        exit()
 
-    #Zajami prvo sliko iz kamere
-    
-    #Izračunamo barvo kože na prvi sliki
-    
-    #Zajemaj slike iz kamere in jih obdeluj     
-    
-    #Označi območja (škatle), kjer se nahaja obraz (kako je prepuščeno vaši domišljiji)
-        #Vprašanje 1: Kako iz števila pikslov iz vsake škatle določiti celotno območje obraza (Floodfill)?
-        #Vprašanje 2: Kako prešteti število ljudi?
+    ret, frame = kamera.read()
+    if not ret:
+        print("Napaka pri branju slike")
+        kamera.release()
+        exit()
+    # obmocje
+    h, w, _ = frame.shape
+    levo_zgoraj = (w // 2 - 20, h // 2 - 20)
+    desno_spodaj = (w // 2 + 20, h // 2 + 20)
 
-        #Kako velikost prebirne škatle vpliva na hitrost algoritma in točnost detekcije? Poigrajte se s parametroma velikost_skatle
-        #in ne pozabite, da ni nujno da je škatla kvadratna.
-    pass
+    barva_koze = doloci_barvo_koze(frame, levo_zgoraj, desno_spodaj)
+
+    while True:
+
+        ret, frame = kamera.read()
+        frame = cv.flip(frame, 1)
+        if not ret:
+            break
+
+        frame = zmanjsaj_sliko(frame, 640, 480)
+        skatle = obdelaj_sliko_s_skatlami(frame, velikost_skatle, velikost_skatle, barva_koze)
+
+        prag = int(velikost_skatle * velikost_skatle * 0.10)
+
+        for x, y, piksli_koze in skatle:
+            if piksli_koze > prag:
+                cv.rectangle(frame, (x, y), (x + velikost_skatle, y + velikost_skatle), (0, 255, 0), 1)
+
+       
+        cv.imshow('Detekcija obraza', frame)
+
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+    kamera.release()
+    cv.destroyAllWindows()
